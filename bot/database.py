@@ -2,112 +2,107 @@ import sqlite3
 from contextlib import closing
 
 
-def init_db(): # инициализация бд и создание таблиц
+def init_db() -> None:
+    # инициализация бд и создание таблиц
     with sqlite3.connect('../moneybot/expenses.db') as conn:
         with closing(conn.cursor()) as cur:
-            cur.execute('''
+            cur.execute('''            
                 CREATE TABLE IF NOT EXISTS users (
-                    user_id INTEGER PRIMARY KEY,
-                    username TEXT
+                    login TEXT PRIMARY KEY,
+                    password TEXT
                 )
             ''')
             cur.execute('''
                 CREATE TABLE IF NOT EXISTS expenses (
                     expense_id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    user_id INTEGER,
                     amount REAL,
+                    login TEXT,
                     category TEXT,
                     date TEXT,
-                    FOREIGN KEY (user_id) REFERENCES users (user_id)
+                    FOREIGN KEY (login) REFERENCES users (login)
                 )
             ''')
             cur.execute('''
                 CREATE TABLE IF NOT EXISTS goals (
                     goal_id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    user_id INTEGER,
                     category TEXT,
                     amount REAL,
-                    date TEXT,
-                    FOREIGN KEY (user_id) REFERENCES users (user_id)
-                )
-            ''')
-            cur.execute(''' 
-                CREATE TABLE IF NOT EXISTS safety (
                     login TEXT,
-                    password TEXT
+                    date TEXT,
+                    FOREIGN KEY (login) REFERENCES users (login)
                 )
             ''')
             conn.commit() # сохраняет изменения
 
 
-def add_user(user_id, username):
+def add_user(login: str, password: str) -> None:
     with sqlite3.connect('../moneybot/expenses.db') as conn:
         with closing(conn.cursor()) as cur:
             cur.execute(
-                'INSERT OR IGNORE INTO users (user_id, username) VALUES (?, ?)',
-                (user_id, username)
+                'INSERT INTO users (login, password) VALUES (?, ?)',
+                (login, password)
             )
             conn.commit()
 
 
-def add_expense(user_id, amount, category, date):
+def add_expense(login: str, amount: float, category: str, date: str) -> None:
     with sqlite3.connect('../moneybot/expenses.db') as conn:
         with closing(conn.cursor()) as cur:
             cur.execute(
-                'INSERT INTO expenses (user_id, amount, category, date) VALUES (?, ?, ?, ?)',
-                (user_id, amount, category, date)
+                'INSERT INTO expenses (login, amount, category, date) VALUES (?, ?, ?, ?)',
+                (login, amount, category, date)
             )
             conn.commit()
 
 
-def get_expenses(user_id):
+def get_expenses(login: str) -> list[tuple[float, str, str]]:
     with sqlite3.connect('../moneybot/expenses.db') as conn:
         with closing(conn.cursor()) as cur:
             cur.execute(
-                'SELECT amount, category, date FROM expenses WHERE user_id = ?',
-                (user_id,)
+                'SELECT amount, category, date FROM expenses WHERE login = ?',
+                (login,)
             )
             expenses = cur.fetchall()
     return expenses
 
 
-def get_goals(user_id):
+def get_goals(login: str) -> list[tuple[str, float]]:
     with sqlite3.connect('../moneybot/expenses.db') as conn:
         with closing(conn.cursor()) as cur:
             cur.execute(
-                'SELECT category, amount FROM goals WHERE user_id = ?',
-                (user_id,)
+                'SELECT category, amount FROM goals WHERE login = ?',
+                (login,)
             )
             goals = cur.fetchall()
     return goals
 
 
-def add_goal(user_id, category, amount, date):
+def add_goal(login: str, category: str, amount: float, date: str) -> str:
     with sqlite3.connect('../moneybot/expenses.db') as conn:
         with closing(conn.cursor()) as cur:
             cur.execute(
-                'SELECT 1 FROM goals WHERE user_id = ? AND category = ?', (user_id, category)
+                'SELECT 1 FROM goals WHERE login = ? AND category = ?', (login, category)
             )
             result = cur.fetchone()
             if result:
                 cur.execute(
-                    'UPDATE goals SET amount = ?, date = ? WHERE user_id = ? AND category = ?',
-                    (amount, date, user_id, category)
+                    'UPDATE goals SET amount = ?, date = ? WHERE login = ? AND category = ?',
+                    (amount, date, login, category)
                 )
                 conn.commit()
                 return f'лимит {category} обновлен.'
             else:
                 cur.execute(
-                    'INSERT INTO goals (user_id, category, amount, date) VALUES (?, ?, ?, ?)',
-                    (user_id, category, amount, date)
+                    'INSERT INTO goals (login, category, amount, date) VALUES (?, ?, ?, ?)',
+                    (login, category, amount, date)
                 )
                 conn.commit()
                 return f'лимит {category} добавлен.'
 
 
-def delete_all_data(user_id):
+def delete_all_data(login: str) -> None:
     with sqlite3.connect('../moneybot/expenses.db') as conn:
         with closing(conn.cursor()) as cur:
-            cur.execute('DELETE FROM expenses WHERE user_id = ?', (user_id,))
-            cur.execute('DELETE FROM goals WHERE user_id = ?', (user_id,))
+            cur.execute('DELETE FROM expenses WHERE login = ?', (login,))
+            cur.execute('DELETE FROM goals WHERE login = ?', (login,))
             conn.commit()
