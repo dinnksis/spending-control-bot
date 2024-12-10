@@ -1,19 +1,15 @@
 from aiogram import Router, Dispatcher
-import bcrypt
 from aiogram.types import Message, ReplyKeyboardMarkup, KeyboardButton
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
-import database_safety
-from database_safety import user_adding, is_user_registered
-from contextlib import closing
-
-login=''
-flag=0
+from database_safety import add_user_to_database, is_user_registered, check_password
+from handlers import buttons
+import global_values as gv
 
 router = Router()
 
-# Клавиатура
+# клавиатура
 main_buttons = ReplyKeyboardMarkup(
     keyboard=[
         [KeyboardButton(text='регистрация'), KeyboardButton(text='вход')],
@@ -24,110 +20,99 @@ main_buttons = ReplyKeyboardMarkup(
 
 # состояния FSM
 class Form(StatesGroup):
-    waiting_for_registration_login = State()
-    waiting_for_registration_password = State()
-    waiting_for_vhod_login = State()
-    waiting_for_vhod_password = State()
-    authorizedd = State()
+    waiting_for_registration_login_state = State()
+    waiting_for_registration_password_state = State()
+    waiting_for_login_login_state = State()
+    waiting_for_login_password_state = State()
+    authorized_state = State()
 
 
-# Обработчик команды /start
+# обработчик команды /start
 @router.message(lambda message: message.text.lower() == '/start')
 async def send_welcome(message: Message):
-    await message.answer('вы запустили telegram-бота для управления расходами. надеюсь, вам понравится:). пожалуйства, войдите в систему или зарегестрируйтесь',
+    gv.login = ''
+    gv.is_authorized = False
+    await message.answer('вы запустили telegram-бота для управления расходами. надеюсь, вам понравится:). '
+                         'пожалуйства, войдите в систему или зарегистрируйтесь',
                          reply_markup=main_buttons)
 
 
-#рeгистрация
+# рeгистрация
 @router.message(lambda message: message.text and message.text.lower() == 'регистрация')
-async def waiting_registration_login(message: Message,state: FSMContext):
-    await message.answer('придумайте логин')
-    await state.set_state(Form.waiting_for_registration_login)
+async def wait_for_registration_login(message: Message, state: FSMContext):
+    await message.answer('придумайте логин:')
+    await state.set_state(Form.waiting_for_registration_login_state)
 
 
-#ожидание ввода логина
-@router.message(Form.waiting_for_registration_login)
-async def waiting_registration_password(message: Message, state: FSMContext):
-    login=message.text.strip()
-    if (database_safety.is_user_registered(login)):
-        await message.reply("такой логин уже занят(. попробуйте придумать другой:")
-        return #вернуться если логин занят
-    else: #если логин свободен
-        await state.update_data(login=login)  # сохраняем логин в состоянии
-        await message.answer("придумайте пароль:")
-        await state.set_state(Form.waiting_for_registration_password)  # переводит в состотяние ожидания пароля
+# ожидание ввода логина
+@router.message(Form.waiting_for_registration_login_state)
+async def wait_for_registration_password(message: Message, state: FSMContext):
+    gv.login = message.text.strip().lower()
+    if is_user_registered(gv.login):
+        await message.reply('такой логин уже занят(. попробуйте придумать другой:')
+        return # вернуться если логин занят
+    # если логин свободен
+    await state.update_data(login=gv.login)  # сохраняем логин в состоянии
+    await message.answer('придумайте пароль:')
+    await state.set_state(Form.waiting_for_registration_password_state)  # переводит в состотяние ожидания пароля
 
 
-# Ожидание ввода пароля
-@router.message(Form.waiting_for_registration_password)
+# ожидание ввода пароля
+@router.message(Form.waiting_for_registration_password_state)
 async def take_registration_password(message: Message, state: FSMContext):
     password = message.text.strip()
 
-    # Получаем логин из состояния
+    # получаем логин из состояния
     data = await state.get_data()
-    login = data['login']
+    gv.login = data['login'].lower()
 
-    # Сохранение в базу данных
-    user_adding(login, password)
-    await message.answer("вы успешно зарегистрированы!")
-    #надо открыть меню основное наше ему
+    # сохранение в базу данных
+    add_user_to_database(gv.login, password)
     await state.clear()
-    global authorized
-    authorized=True
-    #await state.set_state(Form.authorizedd)
-    #await state.authorized.set() #установка того, что чел зашел в систему
+    gv.is_authorized=True
+
+    # вход в основную систему
+    await message.reply('вы успешно зарегистрировались!', reply_markup=buttons)
 
 
-#вход
+# вход
 @router.message(lambda message: message.text and message.text.lower() == 'вход')
-async def waiting_vhod_login(message: Message, state: FSMContext):
-    await message.answer('введите логин')
-    await state.set_state(Form.waiting_for_vhod_login)
+async def wait_for_login_login(message: Message, state: FSMContext):
+    await message.answer('введите логин:')
+    await state.set_state(Form.waiting_for_login_login_state)
 
 
-#ожидание ввода логина
-@router.message(Form.waiting_for_vhod_login)
-async def waiting_vhod_password(message: Message, state: FSMContext):
-    login = message.text.strip()
-    if not(database_safety.is_user_registered(login)):
-        await message.reply("кажется,такого логина не существует,попробуйте еще раз:")
+# ожидание ввода логина
+@router.message(Form.waiting_for_login_login_state)
+async def wait_for_login_password(message: Message, state: FSMContext):
+    gv.login = message.text.strip().lower()
+    if not(is_user_registered(gv.login)):
+        await message.reply('кажется,такого логина не существует, попробуйте еще раз:')
         return  # вернуться если логин занят
         # по возможности должны вылезти кнопки зарегесрироватся и попробывать еще раз
     else:
-        await state.update_data(login=login)
-        await message.answer("введите пароль:")
-        await state.set_state(Form.waiting_for_vhod_password) # переводит в состотяние ожидания пароля
+        await state.update_data(login=gv.login)
+        await message.answer('введите пароль:')
+        await state.set_state(Form.waiting_for_login_password_state) # переводит в состотяние ожидания пароля
 
 
-# Ожидание ввода пароля
-@router.message(Form.waiting_for_vhod_password)
-async def take_vhod_password(message: Message, state: FSMContext):
+# ожидание ввода пароля
+@router.message(Form.waiting_for_login_password_state)
+async def take_login_password(message: Message, state: FSMContext):
     password = message.text.strip()
 
-    # Получаем логин из состояния
+    # получаем логин из состояния
     data = await state.get_data()
-    global login
-    login = data.get("login")
-    if database_safety.check_password(login,password):
-        #сделать чтобы попадал в основную систему
-        #await message.answer("вы вошли в систему!")
-        global flag
-        flag = 1
+    login = data.get('login').lower()
+    if check_password(login,password):
+        # попадание в основную систему
+        gv.is_authorized = True
         await state.clear()
-
-        #await state.set_state(Form.authorizedd)# установка того, что чел зашел в систему
+        await message.reply('вы успешно вошли в систему!', reply_markup=buttons)
     else:
-        await message.answer("неправильный пароль, попробуйте еще раз")
+        await message.answer('неправильный пароль, попробуйте еще раз')
         return
 
-
-
-def authorized():
-    if flag==1:
-        return True
-    return False
-def login():
-    return login
 
 # регистрация всех обработчиков в диспетчере
 def register_handlers(dp: Dispatcher):
