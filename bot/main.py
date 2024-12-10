@@ -2,8 +2,8 @@ import logging
 import asyncio
 from aiogram import Bot, Dispatcher
 from config import API_TOKEN
-from moneybot.registration import register_handlers
-from moneybot.handlers import registerr_handlers
+from registration import register_handlers
+from handlers import registerr_handlers
 from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.filters.state import StateFilter
 from database import init_db
