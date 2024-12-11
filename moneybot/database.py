@@ -1,10 +1,11 @@
 import sqlite3
 from contextlib import closing
-
+import os
 
 def init_db() -> None:
     # инициализация бд и создание таблиц
-    with sqlite3.connect('../moneybot/expenses.db') as conn:
+    db_path = os.path.join(os.path.dirname(__file__), 'expenses.db')
+    with sqlite3.connect(db_path) as conn:
         with closing(conn.cursor()) as cur:
             cur.execute('''            
                 CREATE TABLE IF NOT EXISTS users (
@@ -36,7 +37,8 @@ def init_db() -> None:
 
 
 def add_user(login: str, password: str) -> None:
-    with sqlite3.connect('../moneybot/expenses.db') as conn:
+    db_path = os.path.join(os.path.dirname(__file__), 'expenses.db')
+    with sqlite3.connect(db_path) as conn:
         with closing(conn.cursor()) as cur:
             cur.execute(
                 'INSERT INTO users (login, password) VALUES (?, ?)',
@@ -46,7 +48,8 @@ def add_user(login: str, password: str) -> None:
 
 
 def add_expense(login: str, amount: float, category: str, date: str) -> None:
-    with sqlite3.connect('../moneybot/expenses.db') as conn:
+    db_path = os.path.join(os.path.dirname(__file__), 'expenses.db')
+    with sqlite3.connect(db_path) as conn:
         with closing(conn.cursor()) as cur:
             cur.execute(
                 'INSERT INTO expenses (login, amount, category, date) VALUES (?, ?, ?, ?)',
@@ -56,7 +59,8 @@ def add_expense(login: str, amount: float, category: str, date: str) -> None:
 
 
 def get_expenses(login: str) -> list[tuple[float, str, str]]:
-    with sqlite3.connect('../moneybot/expenses.db') as conn:
+    db_path = os.path.join(os.path.dirname(__file__), 'expenses.db')
+    with sqlite3.connect(db_path) as conn:
         with closing(conn.cursor()) as cur:
             cur.execute(
                 'SELECT amount, category, date FROM expenses WHERE login = ?',
@@ -67,7 +71,8 @@ def get_expenses(login: str) -> list[tuple[float, str, str]]:
 
 
 def get_goals(login: str) -> list[tuple[str, float]]:
-    with sqlite3.connect('../moneybot/expenses.db') as conn:
+    db_path = os.path.join(os.path.dirname(__file__), 'expenses.db')
+    with sqlite3.connect(db_path) as conn:
         with closing(conn.cursor()) as cur:
             cur.execute(
                 'SELECT category, amount FROM goals WHERE login = ?',
@@ -78,7 +83,8 @@ def get_goals(login: str) -> list[tuple[str, float]]:
 
 
 def add_goal(login: str, category: str, amount: float, date: str) -> str:
-    with sqlite3.connect('../moneybot/expenses.db') as conn:
+    db_path = os.path.join(os.path.dirname(__file__), 'expenses.db')
+    with sqlite3.connect(db_path) as conn:
         with closing(conn.cursor()) as cur:
             cur.execute(
                 'SELECT 1 FROM goals WHERE login = ? AND category = ?', (login, category)
@@ -101,7 +107,8 @@ def add_goal(login: str, category: str, amount: float, date: str) -> str:
 
 
 def delete_all_data(login: str) -> None:
-    with sqlite3.connect('../moneybot/expenses.db') as conn:
+    db_path = os.path.join(os.path.dirname(__file__), 'expenses.db')
+    with sqlite3.connect(db_path) as conn:
         with closing(conn.cursor()) as cur:
             cur.execute('DELETE FROM expenses WHERE login = ?', (login,))
             cur.execute('DELETE FROM goals WHERE login = ?', (login,))
