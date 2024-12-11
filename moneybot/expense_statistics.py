@@ -5,6 +5,7 @@ import seaborn as sns
 import os
 from database import init_db
 
+
 def generate_expense_statistics():
     # Инициализируем базу данных перед работой
     init_db()
@@ -90,6 +91,7 @@ def generate_expense_statistics():
     finally:
         # Закрытие соединения
         conn.close()
+
 
 if __name__ == '__main__':
     generate_expense_statistics()
