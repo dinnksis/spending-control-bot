@@ -1,6 +1,7 @@
 import sqlite3
 from contextlib import closing
-import bcrypt # для хэширования паролей
+import bcrypt
+# для хэширования паролей
 
 
 #просто пароль
@@ -54,6 +55,7 @@ def check_password(login: str, password: str) -> bool:
             cur.execute('SELECT password FROM users WHERE login = ?', (login.lower(),))
             result = cur.fetchone()
             return result and bcrypt.checkpw(password.encode('utf-8'), result[0])
+
 
 # Функция проверки пароля
 def check_password(login,password):
