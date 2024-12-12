@@ -8,19 +8,13 @@ from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.filters.state import StateFilter
 from database import init_db
 
-storage = MemoryStorage()
-dp = Dispatcher(storage=storage)
-
-dp.message.filter(StateFilter)
-
-
-logging.basicConfig(level=logging.INFO)
 
 bot = Bot(token=API_TOKEN)
-dp = Dispatcher()
-
+storage = MemoryStorage()
+dp = Dispatcher(storage=storage)
+dp.message.filter(StateFilter)
+logging.basicConfig(level=logging.INFO)
 init_db()
-
 register_handlers(dp)
 registerr_handlers(dp)
 
