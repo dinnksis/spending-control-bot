@@ -1,2 +1,2 @@
-PI_TOKEN = ''
+API_TOKEN = ''
 
