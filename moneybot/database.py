@@ -1,11 +1,10 @@
 import sqlite3
 from contextlib import closing
-import os
 
+
+# инициализация бд и создание таблиц
 def init_db() -> None:
-    # инициализация бд и создание таблиц
-    db_path = os.path.join(os.path.dirname(__file__), 'expenses.db')
-    with sqlite3.connect(db_path) as conn:
+    with sqlite3.connect('expenses.db') as conn:
         with closing(conn.cursor()) as cur:
             cur.execute('''            
                 CREATE TABLE IF NOT EXISTS users (
@@ -24,8 +23,8 @@ def init_db() -> None:
                 )
             ''')
             cur.execute('''
-                CREATE TABLE IF NOT EXISTS goals (
-                    goal_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                CREATE TABLE IF NOT EXISTS limits (
+                    limit_id INTEGER PRIMARY KEY AUTOINCREMENT,
                     category TEXT,
                     amount REAL,
                     login TEXT,
@@ -33,12 +32,13 @@ def init_db() -> None:
                     FOREIGN KEY (login) REFERENCES users (login)
                 )
             ''')
-            conn.commit() # сохраняет изменения
+            conn.commit()
+            # сохраняет изменения
 
 
+# добавление аккаунта
 def add_user(login: str, password: str) -> None:
-    db_path = os.path.join(os.path.dirname(__file__), 'expenses.db')
-    with sqlite3.connect(db_path) as conn:
+    with sqlite3.connect('expenses.db') as conn:
         with closing(conn.cursor()) as cur:
             cur.execute(
                 'INSERT INTO users (login, password) VALUES (?, ?)',
@@ -47,9 +47,9 @@ def add_user(login: str, password: str) -> None:
             conn.commit()
 
 
+# добавление траты
 def add_expense(login: str, amount: float, category: str, date: str) -> None:
-    db_path = os.path.join(os.path.dirname(__file__), 'expenses.db')
-    with sqlite3.connect(db_path) as conn:
+    with sqlite3.connect('expenses.db') as conn:
         with closing(conn.cursor()) as cur:
             cur.execute(
                 'INSERT INTO expenses (login, amount, category, date) VALUES (?, ?, ?, ?)',
@@ -58,9 +58,9 @@ def add_expense(login: str, amount: float, category: str, date: str) -> None:
             conn.commit()
 
 
+# возвращение всех трат по логину
 def get_expenses(login: str) -> list[tuple[float, str, str]]:
-    db_path = os.path.join(os.path.dirname(__file__), 'expenses.db')
-    with sqlite3.connect(db_path) as conn:
+    with sqlite3.connect('expenses.db') as conn:
         with closing(conn.cursor()) as cur:
             cur.execute(
                 'SELECT amount, category, date FROM expenses WHERE login = ?',
@@ -70,46 +70,46 @@ def get_expenses(login: str) -> list[tuple[float, str, str]]:
     return expenses
 
 
-def get_goals(login: str) -> list[tuple[str, float]]:
-    db_path = os.path.join(os.path.dirname(__file__), 'expenses.db')
-    with sqlite3.connect(db_path) as conn:
+# возвращение всех лимитов по логину
+def get_limits(login: str) -> list[tuple[str, float]]:
+    with sqlite3.connect('expenses.db') as conn:
         with closing(conn.cursor()) as cur:
             cur.execute(
-                'SELECT category, amount FROM goals WHERE login = ?',
+                'SELECT category, amount FROM limits WHERE login = ?',
                 (login,)
             )
-            goals = cur.fetchall()
-    return goals
+            limits = cur.fetchall()
+    return limits
 
 
-def add_goal(login: str, category: str, amount: float, date: str) -> str:
-    db_path = os.path.join(os.path.dirname(__file__), 'expenses.db')
-    with sqlite3.connect(db_path) as conn:
+# добавление лимита
+def add_limit(login: str, category: str, amount: float, date: str) -> str:
+    with sqlite3.connect('expenses.db') as conn:
         with closing(conn.cursor()) as cur:
             cur.execute(
-                'SELECT 1 FROM goals WHERE login = ? AND category = ?', (login, category)
+                'SELECT 1 FROM limits WHERE login = ? AND category = ?', (login, category)
             )
             result = cur.fetchone()
             if result:
                 cur.execute(
-                    'UPDATE goals SET amount = ?, date = ? WHERE login = ? AND category = ?',
+                    'UPDATE limits SET amount = ?, date = ? WHERE login = ? AND category = ?',
                     (amount, date, login, category)
                 )
                 conn.commit()
                 return f'лимит {category} обновлен.'
             else:
                 cur.execute(
-                    'INSERT INTO goals (login, category, amount, date) VALUES (?, ?, ?, ?)',
+                    'INSERT INTO limits (login, category, amount, date) VALUES (?, ?, ?, ?)',
                     (login, category, amount, date)
                 )
                 conn.commit()
                 return f'лимит {category} добавлен.'
 
 
+# удаление всех данных по логину
 def delete_all_data(login: str) -> None:
-    db_path = os.path.join(os.path.dirname(__file__), 'expenses.db')
-    with sqlite3.connect(db_path) as conn:
+    with sqlite3.connect('expenses.db') as conn:
         with closing(conn.cursor()) as cur:
             cur.execute('DELETE FROM expenses WHERE login = ?', (login,))
-            cur.execute('DELETE FROM goals WHERE login = ?', (login,))
+            cur.execute('DELETE FROM limits WHERE login = ?', (login,))
             conn.commit()
